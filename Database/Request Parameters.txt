@@ -1,0 +1,3 @@
+{"companies":['WaltDisneyCo'],
+"fromDate":['201101010000'],
+"toDate":['201811010000']}
