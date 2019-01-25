@@ -56,7 +56,7 @@ if len(fromID) > 1024:
 	raise ValueError("Query lenght can't exceed 128 characters")
 
 #Query for the Requested Information 
-query =  '{"query":"' + fromID + '" , "fromDate":"' + fromDate[0] + '", "toDate":"' + toDate[0] + '"}' 
+query =  '{"query":"' + fromID + ' -is:retweet", "fromDate":"' + fromDate[0] + '", "toDate":"' + toDate[0] + '","maxResults":500}' 
 #"maxResults":100
 #-is:retweet
 
@@ -86,21 +86,22 @@ run = True
 #Download Data	
 if len(data) == 4:
 	while len(data) == 4 and run:
+		try:	
+			#Adding Next Parameter	
+			query =  '{"query":"' + fromID + ' -is:retweet", "fromDate":"' + fromDate[0] + '", "toDate":"' + toDate[0] + '", "next": "' + data[2] + '","maxResults":500}'
 			
-		#Adding Next Parameter	
-		query =  '{"query":"' + fromID + '", "fromDate":"' + fromDate[0] + '", "toDate":"' + toDate[0] + '", "next": "' + data[2] + '"}'
-		
-		#In case of error, Downloading will Stop
-		try:
-			data = cnn.download(query)
-		except: 
-			run = False 
+			#In case of error, Downloading will Stop
+			try:
+				data = cnn.download(query)
+			except: 
+				run = False 
 
-		jsonSave.extend(data[1])
-		
-		#Limit of RP(Requests per minute)
-		time.sleep(2.5)
-		
+			jsonSave.extend(data[1])
+			
+			#Limit of RP(Requests per minute)
+			time.sleep(2.5)
+		except KeyboardInterrupt:
+			run = False
 		
 
 logD.info('Download Finished...')

@@ -1,5 +1,8 @@
 library(shiny)
 library(rjson)
+library(tm)
+library(wordcloud)
+library(RColorBrewer)
 
 Sys.setlocale("LC_TIME", "English")
 
@@ -7,38 +10,44 @@ options(shiny.maxRequestSize=4000*1024^2)
 
 ui <- fluidPage(
   
-  sidebarLayout(
-    
-    sidebarPanel(
-      fileInput("json_file", "Choose Json File",
-                multiple = FALSE,
-                accept = c("application/json",
-                           "text/comma-separated-values,text/plain",
-                           ".json")),
-      checkboxGroupInput("tweet", label = NULL, 
-                         choices = list("Tweets" = 1, "Retweets" = 2),
-                         selected = 1),
-      dateRangeInput("dates", label = NULL, start = "2008-01-01", end = "2018-12-31"),
-      textInput("textName", label = NULL, value = "Company Name..."),
-      textInput("textWord", label = NULL, value = "Search..."),
-      div(style="display: inline-block;vertical-align:top; width: 85px;",actionButton("analyze", label = "Analyze")),
-      div(style="display: inline-block;vertical-align:top; width: 85px;",downloadButton("downloadData", "Download"))
-    ),
-    
-    mainPanel(
-    
-      
+  tabsetPanel(
+    id = "tabs",
+    tabPanel("Analyze",
+  
+      sidebarLayout(
+        
+        sidebarPanel(
+          fileInput("json_file", "Choose Json File",
+                    multiple = FALSE,
+                    accept = c("application/json",
+                               "text/comma-separated-values,text/plain",
+                               ".json")),
+          checkboxGroupInput("tweet", label = NULL, 
+                             choices = list("Tweets" = 1, "Retweets" = 2),
+                             selected = 1),
+          dateRangeInput("dates", label = NULL, start = "2008-01-01", end = "2018-12-31"),
+          textInput("textName", label = NULL, value = "Company Name..."),
+          textInput("textWord", label = NULL, value = "Search..."),
+          div(style="display: inline-block;vertical-align:top; width: 85px;",actionButton("analyze", label = "Analyze")),
+          div(style="display: inline-block;vertical-align:top; width: 85px;",downloadButton("downloadData", "Download"))
+        ),
+        mainPanel()
+      )
     )
   )
 )
 
-server <- function(input, output) {
+server <- function(input, output, session) {
+  
   
   observeEvent(input$analyze, {
+
     
-    inFile <- input$json_file
+    inFile <- input$json_file[["datapath"]]
     
-    json_data <- fromJSON(paste(readLines(inFile), collapse=""))
+    json_data <- fromJSON(file = inFile)
+    
+    
     
     #Vectors
     tweets <- c()
@@ -50,6 +59,7 @@ server <- function(input, output) {
     
     inc <- TRUE
     unclean_tweet <- ""
+    
 
     for (i in 1:length(json_data)) {
       
@@ -105,20 +115,27 @@ server <- function(input, output) {
         if (!input$textName == "Company Name...") {
           if (!input$textName %in% json_data[[i]][['user']][['name']]) {
             inc <- FALSE 
+            
           } else if (!input$textWord == "Search...") {
             if (!input$textWord %in% clean_tweet) {
               inc <- FALSE
+              
             }
           }
         } else if (!input$textWord == "Search...") {
           if (!input$textWord %in% clean_tweet) {
             inc <- FALSE
+            
           }
         }
         
-        if (input$dates[[1]] <=  as.Date(json_data[[i]][['created_at']], format = "%a %b %d %H:%M:%S +0000 %Y") &&  as.Date(json_data[[i]][['created_at']], format = "%a %b %d %H:%M:%S +0000 %Y") <= input$dates[[2]]) {
+        if (!(input$dates[[1]] <=  as.Date(json_data[[i]][['created_at']], format = "%a %b %d %H:%M:%S +0000 %Y") &&  as.Date(json_data[[i]][['created_at']], format = "%a %b %d %H:%M:%S +0000 %Y") <= input$dates[[2]])) {
           inc <- FALSE
+          print(input$dates[[1]])
+          print(as.Date(json_data[[i]][['created_at']], format = "%a %b %d %H:%M:%S +0000 %Y"))
         }
+        
+        
         
         if (inc){
           
@@ -134,20 +151,33 @@ server <- function(input, output) {
       unclean_tweet <- ""
     }
     
-    #Create DataFrame
-    df = data.frame(name, date, tweet, rt, r, fav)
     
-      
+    #Create DataFrame
+    df = data.frame(name, date, tweets, rt, r, fav)
+    
+    wordcloudText <- ""
+  
+    wordcloudText <- paste(df$tweets, collapse = " ")
+    
+    
+    
+    
+    cleanWordcloud <-Corpus(VectorSource(wordcloudText))
+    cleanWordcloud <-tm_map(cleanWordcloud,stripWhitespace)
+    cleanWordcloud <-tm_map(cleanWordcloud,tolower)
+    cleanWordcloud <-tm_map(cleanWordcloud,removeNumbers)
+    cleanWordcloud <-tm_map(cleanWordcloud,removePunctuation)
+    cleanWordcloud <- tm_map(cleanWordcloud,removeWords, stopwords("english"))
+    
+    cleanWordcloud <- tm_map(cleanWordcloud,removeWords, c("and","the","our","that","for","are","also","more","has","must","have","should","this","with"))
+    
+    TDMWord <-TermDocumentMatrix(cleanWordcloud)
+    FrecMatrix <-as.matrix(TDMWord)
+    summary <- sort(rowSums(FrecMatrix), decreasing = TRUE)
+    
+    insertTab(inputId = "tabs",tabPanel("Wordcloud", renderPlot(wordcloud(cleanWordcloud, scale=c(5,0.5), max.words=100, random.order=FALSE, rot.per=0.35, use.r.layout=FALSE, colors=brewer.pal(8, "Dark2")))), target = "Analyze")
   })
   
-  output$downloadData <- downloadHandler(
-    filename = function() {
-      paste("Data - ", Sys.Date(), ".csv", sep = "")
-    },
-    content = function(file) {
-      write.csv(df, file)
-    }
-  )
   
 }
 

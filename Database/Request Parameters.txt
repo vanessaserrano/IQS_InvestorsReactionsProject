@@ -1,3 +1,3 @@
-{"companies":['WaltDisneyCo'],
-"fromDate":['201101010000'],
-"toDate":['201811010000']}
+{"companies":['AccorHotelsNews','Airbus','ArcelorMittal','Archos','Atos','AXA','BNPParibas','GroupeBouygues','Capgemini','GroupeCarrefour','saintgobain','Michelin','CreditAgricole','Danone','ENGIEgroup','Essilor','Luxottica','Hermes_paris','KeringGroup','airliquidegroup','Legrad','Loreal','LVMH','orange','Pernod_Ricard','Peugeot','PublicisGroupe','Groupe_Renault', 'SAFRAN','sanofi','SchneiderElec','SocieteGenerale','Sodexogroup','ST_World','TechnipFMC', 'Total', 'urw_group', 'Valeo_Group', 'Veolia ', 'VINCI ', 'vivendi'],
+"fromDate":['200805210000'],
+"toDate":['201812290000']}
